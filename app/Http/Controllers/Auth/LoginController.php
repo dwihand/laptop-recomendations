@@ -40,9 +40,9 @@ class LoginController extends Controller
     {
     
         if(Auth::user()->hasRole('Administrator')){
-            return '/tes';
+            return '/admin';
         }else if(Auth::user()->hasRole('User')){
-            return '/home';
+            return '/user';
         }
         return $this->redirectTo;
     }

@@ -3,7 +3,6 @@
 namespace PhpOffice\PhpSpreadsheet\Reader\Security;
 
 use PhpOffice\PhpSpreadsheet\Reader;
-use PhpOffice\PhpSpreadsheet\Settings;
 
 class XmlScanner
 {
@@ -18,6 +17,11 @@ class XmlScanner
 
     private static $libxmlDisableEntityLoaderValue;
 
+    /**
+     * @var bool
+     */
+    private static $shutdownRegistered = false;
+
     public function __construct($pattern = '<!DOCTYPE')
     {
         $this->pattern = $pattern;
@@ -25,7 +29,10 @@ class XmlScanner
         $this->disableEntityLoaderCheck();
 
         // A fatal error will bypass the destructor, so we register a shutdown here
-        register_shutdown_function([$this, '__destruct']);
+        if (!self::$shutdownRegistered) {
+            self::$shutdownRegistered = true;
+            register_shutdown_function([__CLASS__, 'shutdown']);
+        }
     }
 
     public static function getInstance(Reader\IReader $reader)
@@ -61,9 +68,9 @@ class XmlScanner
         return false;
     }
 
-    private function disableEntityLoaderCheck()
+    private function disableEntityLoaderCheck(): void
     {
-        if (Settings::getLibXmlDisableEntityLoader()) {
+        if (\PHP_VERSION_ID < 80000) {
             $libxmlDisableEntityLoaderValue = libxml_disable_entity_loader(true);
 
             if (self::$libxmlDisableEntityLoaderValue === null) {
@@ -72,19 +79,20 @@ class XmlScanner
         }
     }
 
-    private function shutdown()
+    public static function shutdown(): void
     {
-        if (self::$libxmlDisableEntityLoaderValue !== null) {
+        if (self::$libxmlDisableEntityLoaderValue !== null && \PHP_VERSION_ID < 80000) {
             libxml_disable_entity_loader(self::$libxmlDisableEntityLoaderValue);
+            self::$libxmlDisableEntityLoaderValue = null;
         }
     }
 
     public function __destruct()
     {
-        $this->shutdown();
+        self::shutdown();
     }
 
-    public function setAdditionalCallback(callable $callback)
+    public function setAdditionalCallback(callable $callback): void
     {
         $this->callback = $callback;
     }
@@ -93,13 +101,13 @@ class XmlScanner
     {
         $pattern = '/encoding="(.*?)"/';
         $result = preg_match($pattern, $xml, $matches);
-        $charset = $result ? $matches[1] : 'UTF-8';
+        $charset = strtoupper($result ? $matches[1] : 'UTF-8');
 
         if ($charset !== 'UTF-8') {
             $xml = mb_convert_encoding($xml, 'UTF-8', $charset);
 
             $result = preg_match($pattern, $xml, $matches);
-            $charset = $result ? $matches[1] : 'UTF-8';
+            $charset = strtoupper($result ? $matches[1] : 'UTF-8');
             if ($charset !== 'UTF-8') {
                 throw new Reader\Exception('Suspicious Double-encoded XML, spreadsheet file load() aborted to prevent XXE/XEE attacks');
             }
@@ -112,8 +120,6 @@ class XmlScanner
      * Scan the XML for use of <!ENTITY to prevent XXE/XEE attacks.
      *
      * @param mixed $xml
-     *
-     * @throws Reader\Exception
      *
      * @return string
      */
@@ -141,8 +147,6 @@ class XmlScanner
      * Scan theXML for use of <!ENTITY to prevent XXE/XEE attacks.
      *
      * @param string $filestream
-     *
-     * @throws Reader\Exception
      *
      * @return string
      */

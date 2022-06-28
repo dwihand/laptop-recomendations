@@ -73,3 +73,22 @@ Route::group(['middleware' => 'auth','as' => 'admin.'], function(){
 Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
+
+Route::get('/user', function () {
+    $data['max_price'] = Laptop::max('Price_euros');
+    $data['min_price'] = Laptop::min('Price_euros');
+    $data['average_price'] = Laptop::avg('Price_euros');
+    $data['count_laptop'] = count(Laptop::all());
+    return view('user.dashboard',$data);
+});
+
+
+// Route::group(['middleware' => 'auth','as' => 'user'], function(){
+//     Route::get('/user', function () {
+//         $data['max_price'] = Laptop::max('Price_euros');
+//         $data['min_price'] = Laptop::min('Price_euros');
+//         $data['average_price'] = Laptop::avg('Price_euros');
+//         $data['count_laptop'] = count(Laptop::all());
+//         return view('user.dashboard',$data);
+//     });
+// });
