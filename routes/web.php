@@ -13,6 +13,8 @@
 
 use App\Model\Laptop;
 
+Auth::routes();
+
 Route::get('/tes',function(){
     return view('admin.dashboard');
 }); 
@@ -22,6 +24,13 @@ Route::get('/masuk',function(){
 }); 
 Route::group(['middleware' => 'auth','as' => 'admin.'], function(){
     Route::get('/', function () {
+        $data['max_price'] = Laptop::max('Price_euros');
+        $data['min_price'] = Laptop::min('Price_euros');
+        $data['average_price'] = Laptop::avg('Price_euros');
+        $data['count_laptop'] = count(Laptop::all());
+        return view('admin.dashboard',$data);
+    });
+    Route::get('/first_page', function () {
         $data['max_price'] = Laptop::max('Price_euros');
         $data['min_price'] = Laptop::min('Price_euros');
         $data['average_price'] = Laptop::avg('Price_euros');
@@ -70,7 +79,6 @@ Route::group(['middleware' => 'auth','as' => 'admin.'], function(){
 });
 
 
-Auth::routes();
 
 Route::get('/home', 'HomeController@index')->name('home');
 
@@ -81,14 +89,22 @@ Route::get('/user', function () {
     $data['count_laptop'] = count(Laptop::all());
     return view('user.dashboard',$data);
 });
-
-
-// Route::group(['middleware' => 'auth','as' => 'user'], function(){
-//     Route::get('/user', function () {
-//         $data['max_price'] = Laptop::max('Price_euros');
-//         $data['min_price'] = Laptop::min('Price_euros');
-//         $data['average_price'] = Laptop::avg('Price_euros');
-//         $data['count_laptop'] = count(Laptop::all());
-//         return view('user.dashboard',$data);
-//     });
-// });
+Route::get('/alaptop_user', function () {
+    return view('user.laptop.index');
+});
+Route::get('/asetting_user', function () {
+    $options = \App\Model\Setting::getAllKeyValue();
+    return view('user.setting',$options);
+});
+Route::get('/amatrix_nilai_user', function () {
+    return view('user.saw.matrix_nilai');
+});
+Route::get('/amatrix_normalisasi_user', function () {
+    return view('user.saw.matrix_normalisasi');
+});
+Route::get('/amatrix_preferensi_user', function () {
+    return view('user.saw.matrix_preferensi');
+});
+Route::get('/ahasil_rekomendasi_user', function () {
+    return view('user.saw.hasil_rekomendasi');
+});
